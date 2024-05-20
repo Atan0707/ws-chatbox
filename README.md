@@ -1,4 +1,2 @@
 ## Whatsapp chatbot
-created using wweb.js
-to install
-
+created using whasapp-web.js version 1.23.0
