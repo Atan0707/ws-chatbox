@@ -1,10 +1,14 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcodeTerminal = require('qrcode-terminal');
 const express = require("express")
+const cors = require("cors")
+let qrScanned = false;
 
 const port = 8081;
 const media = MessageMedia.fromFilePath('\amigos.jpg')
 const app = express();
+app.use(cors());
+app.use(express.json());
 
 const client = new Client({
     webVersionCache: {
@@ -20,12 +24,12 @@ const client = new Client({
 
 client.on('ready', () => {
     console.log('Client is ready!');
-    const chatId = '60132615040@c.us';
-    let chatIdWithoutSuffix = chatId.slice(0, -5);
-    client.sendMessage(chatId, `Salam madani ${chatIdWithoutSuffix} dari bot madani`);
-    // client.sendMessage(chatId, `Salam madani ${chatId} dari bot madani`);
-    client.sendMessage(chatId, media);
 });
+
+client.on("authenticated", () => {
+    console.log("Client is authenticated!")
+    qrScanned = true
+})
 
 client.on('message', async message => {
     // console.log('Received message:', message.body);
@@ -46,6 +50,27 @@ client.on('qr', qr => {
 });
 
 client.initialize();
+
+app.post('/send-message', (req, res) => {
+    const {chatId, message} = req.body;
+    // let chatIdWithoutSuffix = chatId.slice(0, -5);
+    // client.sendMessage(chatId, `Salam madani ${chatIdWithoutSuffix} dari bot madani`);
+    client.sendMessage(chatId, message);
+    res.json({ status: 'Message sent' });
+})
+
+app.get("/qr", (req, res) => {
+    if (qrScanned) {
+        res.send({ status: "Authenticated" })
+    } else {
+        new Promise((resolve) => {
+            client.once("qr", resolve);
+        })
+            .then((qrData) => {
+                res.send({ qrData })
+            })
+    }
+});
 
 app.listen(port, () => {
     console.log(`listen on port ${port} ...`);
